@@ -1,9 +1,11 @@
 // components/SignUpPage.jsx
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function SignUpPage({ onSignup }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const navigate = useNavigate();
 
   const handleSignup = () => {
     const users = JSON.parse(localStorage.getItem("users")) || [];
@@ -14,6 +16,7 @@ export default function SignUpPage({ onSignup }) {
     users.push(newUser);
     localStorage.setItem("users", JSON.stringify(users));
     alert("Signup successful, please login.");
+    navigate("/login");
     onSignup();
   };
 
