@@ -1,15 +1,40 @@
+// components/CountryCard.jsx
+
 import React from 'react'
-export default function CountryCard({ country, onClick }) {
-    return (
-      <div
+import { Heart, HeartOff } from 'lucide-react'
+
+export default function CountryCard({ country, onClick, onToggleFavourite, isFavourite }) {
+  return (
+    <div className="bg-white p-4 rounded-xl shadow hover:shadow-lg cursor-pointer relative">
+      <img
+        src={country.flags.svg}
+        alt={country.name.common}
+        className="w-full h-32 object-cover rounded-md"
         onClick={onClick}
-        className="cursor-pointer bg-white p-4 rounded shadow hover:shadow-lg"
+      />
+      <h2 className="mt-2 text-lg font-semibold text-gray-700" onClick={onClick}>
+        {country.name.common}
+      </h2>
+      <p className="text-sm text-gray-500" onClick={onClick}>
+        {country.region}
+      </p>
+      <p className="text-sm text-gray-500">
+        Capital: {country.capital?.[0] ?? 'N/A'}
+      </p>
+
+      <button
+        className="absolute top-2 right-2 text-red-500"
+        onClick={(e) => {
+          e.stopPropagation()
+          onToggleFavourite()
+        }}
       >
-        <img src={country.flags.svg} alt={country.name.common} className="w-full h-40 object-cover mb-2 rounded" />
-        <h2 className="text-xl font-semibold">{country.name.common}</h2>
-        <p><strong>Population:</strong> {country.population.toLocaleString()}</p>
-        <p><strong>Region:</strong> {country.region}</p>
-        <p><strong>Capital:</strong> {country.capital?.[0]}</p>
-      </div>
-    )
-  }
+        {isFavourite ? (
+          <Heart data-testid="lucide-icon" size={18} />
+        ) : (
+          <HeartOff data-testid="lucide-icon" size={18} />
+        )}
+      </button>
+    </div>
+  )
+}

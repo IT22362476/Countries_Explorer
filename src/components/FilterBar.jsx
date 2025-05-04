@@ -1,18 +1,17 @@
+import React from 'react'
 
-const regions = ["All", "Africa", "Americas", "Asia", "Europe", "Oceania"]
+const regions = ['All', 'Africa', 'Americas', 'Asia', 'Europe', 'Oceania']
 
-export default function FilterBar({ onFilter }) {
+export default function FilterBar({ region, onFilter }) {
   return (
-    <div className="flex justify-center flex-wrap gap-2 mt-4">
-      {regions.map(region => (
-        <button
-          key={region}
-          onClick={() => onFilter(region)}
-          className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition"
-        >
-          {region}
-        </button>
+    <select
+      value={region}
+      onChange={(e) => onFilter(e.target.value)}
+      className="w-full sm:w-48 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+    >
+      {regions.map(r => (
+        <option key={r} value={r}>{r}</option>
       ))}
-    </div>
+    </select>
   )
 }
