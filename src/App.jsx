@@ -1,16 +1,41 @@
+// App.jsx
 import React, { useEffect, useState } from 'react'
-import SearchBar from './components/Searchbar'
+import { Routes, Route, Link, useNavigate } from 'react-router-dom'
+import SearchBar from './components/SearchBar'
 import FilterBar from './components/FilterBar'
 import CountryCard from './components/CountryCard'
 import CountryDetails from './components/CountryDetails'
+import FavoritesPage from './pages/FavoritesPage'
 import { saveSession, loadSession } from './utils/session'
+import LoginPage from './components/LoginPage'
+import SignUpPage from './components/SignUpPage'
 
 export default function App() {
   const [countries, setCountries] = useState([])
   const [filtered, setFiltered] = useState([])
   const [selectedCountry, setSelectedCountry] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedRegion, setSelectedRegion] = useState("All")
+  const [favourites, setFavourites] = useState(() => {
+    const saved = localStorage.getItem("favourites")
+    return saved ? JSON.parse(saved) : []
+  })
 
+  const navigate = useNavigate()
+
+  const updateFavourites = (country) => {
+    const exists = favourites.some(fav => fav.cca3 === country.cca3)
+    const updated = exists
+      ? favourites.filter(fav => fav.cca3 !== country.cca3)
+      : [...favourites, country]
+
+    setFavourites(updated)
+    localStorage.setItem("favourites", JSON.stringify(updated))
+  }
+  const handleLogin = () => {
+    navigate('/') // or wherever you want to go after login
+  }
   useEffect(() => {
     fetch('https://restcountries.com/v3.1/all')
       .then(res => res.json())
@@ -19,10 +44,17 @@ export default function App() {
         setLoading(false)
 
         const { lastSearch, lastRegion } = loadSession()
-        if (lastRegion && lastRegion !== 'All') {
-          handleFilter(lastRegion, data)
-        } else if (lastSearch) {
-          handleSearch(lastSearch, data)
+        setSearchQuery(lastSearch)
+        setSelectedRegion(lastRegion)
+
+        if (lastSearch) {
+          const matched = data.filter(c =>
+            c.name.common.toLowerCase().includes(lastSearch.toLowerCase())
+          )
+          setFiltered(matched)
+        } else if (lastRegion && lastRegion !== 'All') {
+          const matched = data.filter(c => c.region === lastRegion)
+          setFiltered(matched)
         } else {
           setFiltered(data)
         }
@@ -33,38 +65,36 @@ export default function App() {
       })
   }, [])
 
-  const handleSearch = async (query) => {
+  const handleSearch = (query) => {
+    setSearchQuery(query)
     saveSession({ lastSearch: query })
-    if (!query) return setFiltered(countries)
-  
-    try {
-      const res = await fetch(`https://restcountries.com/v3.1/name/${query}`)
-      if (!res.ok) throw new Error("Search failed")
-      const data = await res.json()
-      setFiltered(data)
-    } catch (err) {
-      console.error("Failed to search country", err)
-      setFiltered([])
-    }
-  }
-  
 
-  const handleFilter = async (region) => {
-    saveSession({ lastRegion: region })
-  
-    if (region === 'All') return setFiltered(countries)
-  
-    try {
-      const res = await fetch(`https://restcountries.com/v3.1/region/${region}`)
-      if (!res.ok) throw new Error("Region fetch failed")
-      const data = await res.json()
-      setFiltered(data)
-    } catch (err) {
-      console.error("Failed to fetch region", err)
-      setFiltered([])
+    if (!query) {
+      if (selectedRegion === "All") return setFiltered(countries)
+      return setFiltered(countries.filter(c => c.region === selectedRegion))
     }
+
+    const matched = countries.filter(c =>
+      c.name.common.toLowerCase().includes(query.toLowerCase()) &&
+      (selectedRegion === "All" || c.region === selectedRegion)
+    )
+
+    setFiltered(matched)
   }
-  
+
+  const handleFilter = (region) => {
+    setSelectedRegion(region)
+    saveSession({ lastRegion: region })
+
+    if (region === "All" && !searchQuery) return setFiltered(countries)
+
+    const matched = countries.filter(c =>
+      (region === "All" || c.region === region) &&
+      c.name.common.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+
+    setFiltered(matched)
+  }
 
   const handleSelectCountry = async (code) => {
     try {
@@ -79,23 +109,76 @@ export default function App() {
   if (loading) return <div className="p-6 text-center">Loading countries...</div>
 
   return (
-    <div className="p-4 bg-gray-100 min-h-screen">
-      <h1 className="text-3xl font-bold text-center mb-6">REST Countries Explorer</h1>
-      {!selectedCountry && (
-        <>
-          <SearchBar onSearch={handleSearch} />
-          <FilterBar onFilter={handleFilter} />
-        </>
-      )}
-      {selectedCountry ? (
-        <CountryDetails country={selectedCountry} onBack={() => setSelectedCountry(null)} />
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-          {filtered.map(c => (
-            <CountryCard key={c.cca3} country={c} onClick={() => handleSelectCountry(c.cca3)} />
-          ))}
+    <div className="bg-gray-100 min-h-screen">
+      <header className="bg-white shadow-md sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+          <h1
+            className="text-2xl font-bold text-indigo-600 cursor-pointer"
+            onClick={() => navigate('/')}
+          >
+            🌍 Countries Explorer
+          </h1>
+          <div className="space-x-4">
+            <Link to="/favourites" className="text-indigo-600 hover:underline">
+              Favourites
+            </Link>
+            <button
+              onClick={() => {
+                localStorage.removeItem("loggedInUser")
+                navigate("/login")
+              }}
+              className="text-sm text-red-500"
+            >
+              Logout
+            </button>
+
+          </div>
         </div>
-      )}
+      </header>
+
+      <main className="p-4 max-w-7xl mx-auto">
+        <Routes>
+          <Route
+            path="/"
+            element={
+              selectedCountry ? (
+                <CountryDetails country={selectedCountry} onBack={() => setSelectedCountry(null)} />
+              ) : (
+                <>
+                  <div className="bg-white p-4 rounded-xl shadow-md flex flex-col sm:flex-row sm:items-center gap-4">
+                    <SearchBar query={searchQuery} onSearch={handleSearch} />
+                    <FilterBar region={selectedRegion} onFilter={handleFilter} />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                    {filtered.map(c => (
+                      <CountryCard
+                        key={c.cca3}
+                        country={c}
+                        onClick={() => handleSelectCountry(c.cca3)}
+                        onToggleFavourite={() => updateFavourites(c)}
+                        isFavourite={favourites.some(fav => fav.cca3 === c.cca3)}
+                      />
+                    ))}
+                  </div>
+                </>
+              )
+            }
+          />
+          <Route
+            path="/favourites"
+            element={
+              <FavoritesPage
+                favourites={favourites}
+                onSelect={handleSelectCountry}
+              />
+            }
+          />
+          <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
+          <Route path="/signup" element={<SignUpPage />} />
+
+        </Routes>
+      </main>
     </div>
   )
 }
