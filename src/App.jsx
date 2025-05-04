@@ -1,6 +1,6 @@
 // App.jsx
 import React, { useEffect, useState } from 'react'
-import { Routes, Route, Link, useNavigate } from 'react-router-dom'
+import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom'
 import SearchBar from './components/SearchBar'
 import FilterBar from './components/FilterBar'
 import CountryCard from './components/CountryCard'
@@ -18,21 +18,30 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedRegion, setSelectedRegion] = useState("All")
   const [favourites, setFavourites] = useState(() => {
-    const saved = localStorage.getItem("favourites")
+    const user = JSON.parse(localStorage.getItem("loggedInUser"))
+    if (!user) return []
+    const saved = localStorage.getItem(`favourites_${user.username}`) // use email if preferred
     return saved ? JSON.parse(saved) : []
   })
 
+
   const navigate = useNavigate()
+  const location = useLocation()
 
   const updateFavourites = (country) => {
+    const user = JSON.parse(localStorage.getItem("loggedInUser"))
+    if (!user) return
+
+    const key = `favourites_${user.username}`
     const exists = favourites.some(fav => fav.cca3 === country.cca3)
     const updated = exists
       ? favourites.filter(fav => fav.cca3 !== country.cca3)
       : [...favourites, country]
 
     setFavourites(updated)
-    localStorage.setItem("favourites", JSON.stringify(updated))
+    localStorage.setItem(key, JSON.stringify(updated))
   }
+
   const handleLogin = () => {
     navigate('/') // or wherever you want to go after login
   }
@@ -110,31 +119,34 @@ export default function App() {
 
   return (
     <div className="bg-gray-100 min-h-screen">
-      <header className="bg-white shadow-md sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1
-            className="text-2xl font-bold text-indigo-600 cursor-pointer"
-            onClick={() => navigate('/')}
-          >
-            🌍 Countries Explorer
-          </h1>
-          <div className="space-x-4">
-            <Link to="/favourites" className="text-indigo-600 hover:underline">
-              Favourites
-            </Link>
-            <button
-              onClick={() => {
-                localStorage.removeItem("loggedInUser")
-                navigate("/login")
-              }}
-              className="text-sm text-red-500"
+      {location.pathname !== '/login' && location.pathname !== '/signup' && (
+        <header className="bg-white shadow-md sticky top-0 z-10">
+          <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <h1
+              className="text-2xl font-bold text-indigo-600 cursor-pointer"
+              onClick={() => navigate('/')}
             >
-              Logout
-            </button>
+              🌍 Countries Explorer
+            </h1>
+            <div className="space-x-4">
+              <Link to="/favourites" className="text-indigo-600 hover:underline">
+                Favourites
+              </Link>
+              <button
+                onClick={() => {
+                  localStorage.removeItem("loggedInUser")
+                  navigate("/login")
+                  setFavourites([]) // clear favourites on logout
 
+                }}
+                className="text-sm text-red-500"
+              >
+                Logout
+              </button>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       <main className="p-4 max-w-7xl mx-auto">
         <Routes>
